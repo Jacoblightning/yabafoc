@@ -10,6 +10,7 @@ import argparse
 import os.path
 import subprocess
 from bffuck import BFFuck
+from enum import Enum
 
 
 CODE = """
@@ -27,71 +28,111 @@ unsigned char BUFFER[{tape_length}] = {{0}};
 
 
 int main(){{
-    {program_code}
+	{program_code}
 }}
 """
 
+class IL(Enum):
+	NEXT = 0
+	PREV = 1
+	INC  = 2
+	DEC  = 3
+	OUT  = 4
+	IN   = 5
+	LOOP = 6
+	ENDL = 7
+
+
 CONVERT_TABLE = {
-    ">": "ptr_next();",
-    "<": "ptr_prev();",
-    "+": "inc();",
-    "-": "dec();",
-    ".": "out();",
-    ",": "in();",
-    
-    "[": "while (BUFFER[tape_ptr]) {",
-    "]": "}"
+	IL.NEXT: "ptr_next();",
+	IL.PREV: "ptr_prev();",
+	IL.INC:  "inc();",
+	IL.DEC:  "dec();",
+	IL.OUT:  "out();",
+	IL.IN:   "in();",
+
+	IL.LOOP: "while (BUFFER[tape_ptr]) {",
+	IL.ENDL: "}"
 }
 
-def compile_bf_to_c(bf, tape_length, verbose):
-    c_src = ""
+def compile_il_to_c(bf, tape_length, emit_c):
+	c_src = ""
 
-    for char in bf:
-        c_src += CONVERT_TABLE[char]
-        if verbose:
-	        c_src += "\n"
+	for il in bf:
+		c_src += CONVERT_TABLE[il]
+		if emit_c:
+			c_src += "\n"
 
-    real_c_src = CODE.format(tape_length=tape_length, program_code=c_src)
+	real_c_src = CODE.format(tape_length=tape_length, program_code=c_src)
 
-    return real_c_src
+	return real_c_src
 
 def compile_c(c, output, verbose):
 	subprocess.run(["gcc", "-x", "c", "-", "-o", output if output else "a.out"], input=c.encode(), stdout=None if verbose else subprocess.DEVNULL, check=True)
 
 # "cleans" bf code; Removing comments and whitespace
 def clean_bf(bf):
-    clean = ""
-    lines = bf.split("\n")
-    for line in bf:
-        for char in line:
-		    # We follow both bf standards:
-		    # Any char that is not valid is ignored
-		    # and Anything after a # is ignored
-	        if char == "#":
-		        break
+	clean = ""
+	for line in bf.split("\n"):
+		for char in line:
+			# We follow both bf standards:
+			# Any char that is not valid is ignored
+			# and Anything after a # is ignored
+			if char == "#":
+				break
 
-	        if char not in CONVERT_TABLE:
-		        continue
-		    
-	        clean += char
-    return clean
+			if char not in [">", "<", "+", "-", ".", ",", "[", "]"]:
+				continue
+
+			clean += char
+	return clean
+
+def compile_bf_to_il(bf):
+	il = []
+	for char in bf:
+		match char:
+			case ">":
+				il.append(IL.NEXT)
+			case "<":
+				il.append(IL.PREV)
+			case "+":
+				il.append(IL.INC)
+			case "-":
+				il.append(IL.DEC)
+			case ".":
+				il.append(IL.OUT)
+			case ",":
+				il.append(IL.IN)
+			case "[":
+				il.append(IL.LOOP)
+			case "]":
+				il.append(IL.ENDL)
+			case _:
+				raise ValueError(f"Invalid Brainfuck: {char}")
+	return il
 
 def run_compiler(bf, tape_length, output, emit_c, verbose):
-    if verbose:
-        print("Step 1: Removing comments and whitespace...")
-    bf_cleaned = clean_bf(bf)
+	if verbose:
+		print("Step 1: Removing comments and whitespace...")
+	bf_cleaned = clean_bf(bf)
+	if verbose:
+		print(f"Cleaned: {bf_cleaned}")
 
-    if verbose:
-        print("Step 2: Transpiling to C Code...")
-    c_src = compile_bf_to_c(bf_cleaned, tape_length, verbose)
+	if verbose:
+		print("Step 2: Compiling to IL...")
+	il = compile_bf_to_il(bf_cleaned)
 
-    if emit_c:
-        print(c_src)
-        return
+	if verbose:
+		print("Step 3: Compiling to C...")
+	c_src = compile_il_to_c(il, tape_length, emit_c)
 
-    if verbose:
-        print("Step 3: Compiling C Code...")
-    compile_c(c_src, output, verbose)
+	if emit_c:
+		print(c_src)
+		return
+
+	if verbose:
+		print("Step 4: Compiling C Code...")
+	compile_c(c_src, output, verbose)
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -115,10 +156,10 @@ def main():
 		src = srcfile.read()
 
 	if args.flavour == "bffuck":
-	    src = BFFuck().compile(src)
+		src = BFFuck().compile(src)
 
 
 	run_compiler(src, args.tape_length, args.output, args.emit_c, args.verbose)
 
 if __name__ == "__main__":
-    main()
+	main()
