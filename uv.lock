@@ -1,0 +1,23 @@
+version = 1
+revision = 2
+requires-python = ">=3.13"
+
+[[package]]
+name = "bfcc"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "bffuck" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "bffuck", specifier = ">=3.0.0" }]
+
+[[package]]
+name = "bffuck"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/15/c194b93ba5c31a6e71ecddecddfc56b85dd1a0dd5e261e898fd92a1e7b0b/BFFuck-3.0.0.tar.gz", hash = "sha256:60e6aadfa2fba1d99727e44a1c29496ef086ebac444c1d710dd30faae416d0b3", size = 9162, upload-time = "2024-06-18T13:54:52.093Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/ca/bd3a9ba81d9856a47af89cdb82a993c71d32bc476327e6b4875736c02f37/BFFuck-3.0.0-py3-none-any.whl", hash = "sha256:9ff292d88dd595e2ee2d08eb89ef859124aa443272c80f940572f1a5a4bc78e9", size = 8982, upload-time = "2024-06-18T13:54:50.186Z" },
+]
