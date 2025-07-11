@@ -76,17 +76,21 @@ def clean_bf(bf):
 	        clean += char
     return clean
 
-
-
 def run_compiler(bf, tape_length, output, emit_c, verbose):
+    if verbose:
+        print("Step 1: Removing comments and whitespace...")
     bf_cleaned = clean_bf(bf)
 
+    if verbose:
+        print("Step 2: Transpiling to C Code...")
     c_src = compile_bf_to_c(bf_cleaned, tape_length, verbose)
 
     if emit_c:
         print(c_src)
         return
-        
+
+    if verbose:
+        print("Step 3: Compiling C Code...")
     compile_c(c_src, output, verbose)
 
 def main():
