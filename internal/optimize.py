@@ -1,6 +1,10 @@
 from .common import IL
 
-def optimize_repeats(il: list[IL|int], single: IL, multi: IL) -> list[IL|int]:
+import re
+from functools import partial
+from typing import Callable
+
+def optimize_repeats(single: IL, multi: IL, il: list[IL|int]) -> list[IL|int]:
     new_il: list[IL|int] = []
 
     count = 0
@@ -18,12 +22,13 @@ def optimize_repeats(il: list[IL|int], single: IL, multi: IL) -> list[IL|int]:
             count = 0
         new_il.append(c)
     return new_il
-            
+
+# Optimize [-] to one instruction
 def optimize_zeros(il: list[IL|int]) -> list[IL|int]:
-    new_il = []
+    new_il: list[IL|int] = []
 
     for c in range(len(il)):
-        # Optimizations past this point require a history of > 2
+        # The zeros optimization requires at least 2 previous ILs
         if c < 2:
             new_il.append(il[c])
             continue
@@ -39,13 +44,56 @@ def optimize_zeros(il: list[IL|int]) -> list[IL|int]:
         
     return new_il
 
+def unravel_loops(il: list[IL|int]) -> list[IL|int]:
+    def optimize_loop_il(il: list[IL|int]):
+        # Make sure the loop only contains arithmetic
+        # Iterate through loop
+        for i in il:
+            if il not in [IL]:
+                pass
+
+
+
+    new_il: list[IL|int] = []
+
+    
+    # Code to find inner loops (loops with no more loops inside them)
+    loop_ptr: int|None = None
+    
+    for c, il_code in enumerate(il):
+        if il_code is IL.LOOP:
+            loop_ptr = c
+        if il_code is IL.ENDL:
+            if loop_ptr is None:
+                raise ValueError("] detected while not in a loop")
+            print(f"Loop Ptr: {loop_ptr}\nLoop end Ptr: {c}")
+            optimize_loop_il(il[loop_ptr+1:c])
+                
+
+    return il
+
+
+# Optimization levels are simple: Call all level 1 opts, then all level 2 opts, etc...
+OPTIMIZATIONS: list[list[Callable]] = [
+    # Level 1 Optimizations
+    [
+        # Repeat Optimization
+        *[partial(optimize_repeats, single=s, multi=m) for s, m in ((IL.INC, IL.ADD), (IL.DEC, IL.SUB), (IL.NEXT, IL.SKIP), (IL.PREV, IL.BACK))],
+        # Optimize zeroing instructions
+        optimize_zeros
+    ],
+    # Level 2 Optimizations
+    [
+        unravel_loops
+    ]
+]
+
 def optimize_il(il: list[IL]) -> list[IL|int]:
 
     new_il = il
 
-    for s, m in ((IL.INC, IL.ADD), (IL.DEC, IL.SUB), (IL.NEXT, IL.SKIP), (IL.PREV, IL.BACK)):
-        new_il = optimize_repeats(new_il, s, m)
-
-    new_il = optimize_zeros(new_il)
+    for optimizations in OPTIMIZATIONS:
+        for optimization in optimizations:
+            new_il = optimization(il=new_il)
     
     return new_il
