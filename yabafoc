@@ -14,7 +14,7 @@ from unittest import case
 
 from bffuck import BFFuck
 
-from internal.common import IL, CONVERT_TABLE
+from internal.common import BF_IL, Optimized_IL, IL_Out, IL_In, IL_Loop, IL_Endl, IL_Set, IL_Add, IL_Sub, IL_Skip, IL_Back, CONVERT_TABLE
 from internal.optimize import optimize_il
 
 
@@ -26,12 +26,8 @@ unsigned char BUFFER[{tape_length}] = {{0}};
 
 #define ptr_next() tape_ptr = (tape_ptr+1)%{tape_length}
 #define ptr_prev() tape_ptr = (tape_ptr-1)%{tape_length}
-#define inc()      BUFFER[tape_ptr]++
-#define dec()      BUFFER[tape_ptr]--
 #define out()      printf("%c", (char)BUFFER[tape_ptr])
 #define in()       BUFFER[tape_ptr] = (unsigned char)getchar()
-
-// Optimized IL Commands
 #define set(x)     BUFFER[tape_ptr] = x
 #define add(x)     BUFFER[tape_ptr] += x
 #define sub(x)     BUFFER[tape_ptr] -= x
@@ -47,47 +43,13 @@ int main(){{
 def compile_il_to_c(bf, tape_length, emit_c):
     c_src = ""
 
-    skipnext = False
     for c, il in enumerate(bf):
-        if skipnext:
-            skipnext = False
-            continue
+        toadd = CONVERT_TABLE[il.__class__]
 
-        match il:
-            case IL.NEXT:
-                c_src += CONVERT_TABLE[il]
-            case IL.PREV:
-                c_src += CONVERT_TABLE[il]
-            case IL.INC:
-                c_src += CONVERT_TABLE[il]
-            case IL.DEC:
-                c_src += CONVERT_TABLE[il]
-            case IL.OUT:
-                c_src += CONVERT_TABLE[il]
-            case IL.IN:
-                c_src += CONVERT_TABLE[il]
-            case IL.LOOP:
-                c_src += CONVERT_TABLE[il]
-            case IL.ENDL:
-                c_src += CONVERT_TABLE[il]
+        if hasattr(il, "operand"):
+            toadd = toadd.format(operand=il.operand)
 
-            case IL.SET:
-                c_src += CONVERT_TABLE[il].format(operand=bf[c+1])
-                skipnext = True
-            case IL.ADD:
-                c_src += CONVERT_TABLE[il].format(operand=bf[c+1])
-                skipnext = True
-            case IL.SUB:
-                c_src += CONVERT_TABLE[il].format(operand=bf[c+1])
-                skipnext = True
-            case IL.SKIP:
-                c_src += CONVERT_TABLE[il].format(operand=bf[c+1])
-                skipnext = True
-            case IL.BACK:
-                c_src += CONVERT_TABLE[il].format(operand=bf[c+1])
-                skipnext = True
-            case _:
-                raise ValueError("Unhandled il type")
+        c_src += toadd
 
         if emit_c:
             c_src += "\n"
@@ -121,21 +83,21 @@ def compile_bf_to_il(bf: list[str]):
     for char in bf:
         match char:
             case ">":
-                il.append(IL.NEXT)
+                il.append(BF_IL.NEXT)
             case "<":
-                il.append(IL.PREV)
+                il.append(BF_IL.PREV)
             case "+":
-                il.append(IL.INC)
+                il.append(BF_IL.INC)
             case "-":
-                il.append(IL.DEC)
+                il.append(BF_IL.DEC)
             case ".":
-                il.append(IL.OUT)
+                il.append(BF_IL.OUT)
             case ",":
-                il.append(IL.IN)
+                il.append(BF_IL.IN)
             case "[":
-                il.append(IL.LOOP)
+                il.append(BF_IL.LOOP)
             case "]":
-                il.append(IL.ENDL)
+                il.append(BF_IL.ENDL)
             case _:
                 raise ValueError(f"Invalid Brainfuck: {char}")
     return il
@@ -155,13 +117,7 @@ def run_compiler(bf, tape_length, output, emit_c, verbose):
         print("Step 3: Optimizing IL...")
     il = optimize_il(il)
     if verbose:
-        str_il = []
-        for i in il:
-            if isinstance(i, IL):
-                str_il.append(i.name)
-            else:
-                str_il.append(str(i))
-        print(f"IL: {', '.join(str_il)}")
+        print(f"IL: {', '.join(map(repr, il))}")
 
         print("Step 3: Compiling to C...")
     c_src = compile_il_to_c(il, tape_length, emit_c)

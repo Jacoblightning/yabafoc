@@ -1,4 +1,4 @@
-from .common import IL
+from .common import BF_IL, Optimized_IL, Optimized_Arithemetic_IL, IL_Out, IL_In, IL_Loop, IL_Endl, IL_Set, IL_Add, IL_Sub, IL_Skip, IL_Back
 
 import re
 from functools import partial
@@ -6,8 +6,8 @@ from typing import Callable
 
 # Coded with references, help, and some shameless stealing from https://github.com/matslina/bfoptimization
 
-def optimize_repeats(single: IL, multi: IL, il: list[IL|int]) -> list[IL|int]:
-    new_il: list[IL|int] = []
+def optimize_repeats(single: BF_IL, multi: Optimized_IL, il: list[BF_IL|Optimized_IL]) -> list[BF_IL|Optimized_IL]:
+    new_il: list[BF_IL|Optimized_IL] = []
 
     count = 0
 
@@ -16,15 +16,14 @@ def optimize_repeats(single: IL, multi: IL, il: list[IL|int]) -> list[IL|int]:
             count += 1
             continue
         if count > 0:
-            new_il.append(multi)
-            new_il.append(count)
+            new_il.append(multi(count))
             count = 0
         new_il.append(c)
     return new_il
 
 # Optimize [-] to one instruction
-def optimize_zeros(il: list[IL|int]) -> list[IL|int]:
-    new_il: list[IL|int] = []
+def optimize_zeros(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    new_il: list[Optimized_IL] = []
 
     for c in range(len(il)):
         # The zeros optimization requires at least 2 previous ILs
@@ -33,23 +32,22 @@ def optimize_zeros(il: list[IL|int]) -> list[IL|int]:
             continue
 
         # Set 0
-        if il[c-2] is IL.LOOP and il[c-1] is IL.DEC and il[c] is IL.ENDL:
+        if isinstance(il[c-2], IL_Loop) and isinstance(il[c-1], IL_Sub) and il[c-1].operand == 1 and isinstance(il[c], IL_Endl):
             del new_il[-2:]
-            new_il.append(IL.SET)
-            new_il.append(0)
+            new_il.append(IL_Set(0))
             continue
 
         new_il.append(il[c])
         
     return new_il
 
-def unravel_loops(il: list[IL|int]) -> list[IL|int]:
-    def optimize_loop_il(il: list[IL|int]) -> list[IL|int]:
+def unravel_loops(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    def optimize_loop_il(il: list[Optimized_IL]) -> list[Optimized_IL]:
         # Make sure the loop only contains arithmetic
         # Iterate through loop. Could probably be replaced by a comprehension and any()
         for i in il:
-            if il not in [IL.SET, IL.ADD, IL.SUB, IL.SKIP, IL.BACK]:
-                # This loop is not just arithmetic. We cant optimize it
+            if not issubclass(i.__class__, Optimized_Arithemetic_IL):
+                # This loop is not just arithmetic. We can't optimize it
                 return il
 
         # List is good
@@ -63,16 +61,16 @@ def unravel_loops(il: list[IL|int]) -> list[IL|int]:
 
 
 
-    new_il: list[IL|int] = []
+    new_il: list[Optimized_IL] = []
 
     
     # Code to find inner loops (loops with no more loops inside them)
     loop_ptr: int|None = None
     
     for c, il_code in enumerate(il):
-        if il_code is IL.LOOP:
+        if isinstance(il_code, IL_Loop):
             loop_ptr = c
-        if il_code is IL.ENDL:
+        if isinstance(il_code, IL_Endl):
             if loop_ptr is None:
                 raise ValueError("] detected while not in a loop")
             print(f"Loop Ptr: {loop_ptr}\nLoop end Ptr: {c}")
@@ -81,13 +79,37 @@ def unravel_loops(il: list[IL|int]) -> list[IL|int]:
 
     return il
 
+def convert_bf_to_optimized_il(il: list[BF_IL]) -> list[Optimized_IL]:
+    intermediate: list[BF_IL|Optimized_IL] = il
+
+    for s, m in ((BF_IL.INC, IL_Add), (BF_IL.DEC, IL_Sub), (BF_IL.NEXT, IL_Skip), (BF_IL.PREV, IL_Back)):
+        intermediate = optimize_repeats(s, m, intermediate)
+
+    new_il: list[Optimized_IL] = []
+
+    for i in intermediate:
+        if i is BF_IL.LOOP:
+            new_il.append(IL_Loop())
+            continue
+        if i is BF_IL.ENDL:
+            new_il.append(IL_Endl())
+            continue
+        if i is BF_IL.OUT:
+            new_il.append(IL_Out())
+            continue
+        if i is BF_IL.IN:
+            new_il.append(IL_In())
+            continue
+        new_il.append(i)
+
+    return new_il
+
+
 
 # Optimization levels are simple: Call all level 1 opts, then all level 2 opts, etc...
 OPTIMIZATIONS: list[list[Callable]] = [
     # Level 1 Optimizations
     [
-        # Repeat Optimization
-        *[partial(optimize_repeats, single=s, multi=m) for s, m in ((IL.INC, IL.ADD), (IL.DEC, IL.SUB), (IL.NEXT, IL.SKIP), (IL.PREV, IL.BACK))],
         # Optimize zeroing instructions
         optimize_zeros
     ],
@@ -97,9 +119,9 @@ OPTIMIZATIONS: list[list[Callable]] = [
     ]
 ]
 
-def optimize_il(il: list[IL]) -> list[IL|int]:
+def optimize_il(il: list[BF_IL]) -> list[Optimized_IL]:
 
-    new_il = il
+    new_il = convert_bf_to_optimized_il(il)
 
     for optimizations in OPTIMIZATIONS:
         for optimization in optimizations:
