@@ -13,10 +13,9 @@ def optimize_repeats(single: IL, multi: IL, il: list[IL|int]) -> list[IL|int]:
         if c is single:
             count += 1
             continue
-        else:
-            if count > 0:
-                new_il.append(multi)
-                new_il.append(count)
+        if count > 0:
+            new_il.append(multi)
+            new_il.append(count)
             count = 0
         new_il.append(c)
     return new_il
