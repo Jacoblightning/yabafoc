@@ -4,6 +4,8 @@ import re
 from functools import partial
 from typing import Callable
 
+# Coded with references, help, and some shameless stealing from https://github.com/matslina/bfoptimization
+
 def optimize_repeats(single: IL, multi: IL, il: list[IL|int]) -> list[IL|int]:
     new_il: list[IL|int] = []
 
@@ -42,12 +44,22 @@ def optimize_zeros(il: list[IL|int]) -> list[IL|int]:
     return new_il
 
 def unravel_loops(il: list[IL|int]) -> list[IL|int]:
-    def optimize_loop_il(il: list[IL|int]):
+    def optimize_loop_il(il: list[IL|int]) -> list[IL|int]:
         # Make sure the loop only contains arithmetic
-        # Iterate through loop
+        # Iterate through loop. Could probably be replaced by a comprehension and any()
         for i in il:
-            if il not in [IL]:
-                pass
+            if il not in [IL.SET, IL.ADD, IL.SUB, IL.SKIP, IL.BACK]:
+                # This loop is not just arithmetic. We cant optimize it
+                return il
+
+        # List is good
+
+        mem, p = {}, 0
+
+        for i in il:
+            pass
+        
+        return il
 
 
 
