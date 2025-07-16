@@ -1,4 +1,4 @@
-from .common import BF_IL, Optimized_IL, Optimized_Arithemetic_IL, IL_Out, IL_In, IL_Loop, IL_Endl, IL_Set, IL_Add, IL_Sub, IL_Skip, IL_Back
+from .common import BF_IL, Optimized_IL, Optimized_Arithemetic_IL, IL_Out, IL_In, IL_Loop, IL_Endl, IL_Set, IL_Add, IL_Sub, IL_Skip, IL_Back, IL_Mul, IL_Copy
 
 import re
 from functools import partial
@@ -42,23 +42,52 @@ def optimize_zeros(il: list[Optimized_IL]) -> list[Optimized_IL]:
     return new_il
 
 def unravel_loops(il: list[Optimized_IL]) -> list[Optimized_IL]:
-    def optimize_loop_il(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    def optimize_loop_il(il: list[Optimized_IL]) -> list[Optimized_IL]|None:
         # Make sure the loop only contains arithmetic
         # Iterate through loop. Could probably be replaced by a comprehension and any()
         for i in il:
             if not issubclass(i.__class__, Optimized_Arithemetic_IL):
                 # This loop is not just arithmetic. We can't optimize it
-                return il
+                return None
 
         # List is good
 
         mem, p = {}, 0
 
         for i in il:
-            pass
-        
-        return il
+            match i:
+                case IL_Skip(operand=x):
+                    p += x
+                case IL_Back(operand=x):
+                    p -= x
+                case IL_Add(operand=x):
+                    mem[p] = mem.get(p, 0) + x
+                case IL_Sub(operand=x):
+                    mem[p] = mem.get(p, 0) - x
+                case _:
+                    raise ValueError(f"???? Unknown IL: {i}")
 
+        if p != 0 or mem[0] != -1:
+            # We can't optimize this loop :(
+            return None
+
+        # We can optimize this!
+
+        optimized = []
+
+        for k, v in mem.items():
+            if k == 0:
+                # The original
+                continue
+
+            if v == 1:
+                optimized.append(IL_Copy(k))
+            else:
+                optimized.append(IL_Mul(k, v))
+
+        # Don't forget the side effect!!!!!
+        optimized.append(IL_Set(0))
+        return optimized
 
 
     new_il: list[Optimized_IL] = []
@@ -68,16 +97,22 @@ def unravel_loops(il: list[Optimized_IL]) -> list[Optimized_IL]:
     loop_ptr: int|None = None
     
     for c, il_code in enumerate(il):
+        new_il.append(il_code)
         if isinstance(il_code, IL_Loop):
             loop_ptr = c
-        if isinstance(il_code, IL_Endl):
-            if loop_ptr is None:
-                raise ValueError("] detected while not in a loop")
-            print(f"Loop Ptr: {loop_ptr}\nLoop end Ptr: {c}")
-            optimize_loop_il(il[loop_ptr+1:c])
+        if isinstance(il_code, IL_Endl) and loop_ptr is not None:
+            opt = optimize_loop_il(il[loop_ptr+1:c])
+            # Used for calculating the correct index for new_il
+            loop_length = c - loop_ptr
+            # The ref to the start of the loop is no longer valid
+            loop_ptr = None
+            if opt is not None:
+                # Delete the old loop from the IL
+                del new_il[len(new_il)-loop_length-1:]
+                new_il.extend(opt)
                 
 
-    return il
+    return new_il
 
 def convert_bf_to_optimized_il(il: list[BF_IL]) -> list[Optimized_IL]:
     intermediate: list[BF_IL|Optimized_IL] = il

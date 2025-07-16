@@ -14,7 +14,7 @@ from unittest import case
 
 from bffuck import BFFuck
 
-from internal.common import BF_IL, Optimized_IL, IL_Out, IL_In, IL_Loop, IL_Endl, IL_Set, IL_Add, IL_Sub, IL_Skip, IL_Back, CONVERT_TABLE
+from internal.common import BF_IL, CONVERT_TABLE
 from internal.optimize import optimize_il
 
 
@@ -34,6 +34,9 @@ unsigned char BUFFER[{tape_length}] = {{0}};
 #define skip(x)    tape_ptr = (tape_ptr+x)%{tape_length}
 #define back(x)    tape_ptr = (tape_ptr-x)%{tape_length}
 
+#define copy(x)    BUFFER[tape_ptr+x] += BUFFER[tape_ptr]
+#define mul(x, m)  BUFFER[tape_ptr+x] += (BUFFER[tape_ptr] * m)
+
 
 int main(){{
     {program_code}
@@ -46,7 +49,9 @@ def compile_il_to_c(bf, tape_length, emit_c):
     for c, il in enumerate(bf):
         toadd = CONVERT_TABLE[il.__class__]
 
-        if hasattr(il, "operand"):
+        if hasattr(il, "op2"):
+            toadd = toadd.format(op=il.op, op2=il.op2)
+        elif hasattr(il, "operand"):
             toadd = toadd.format(operand=il.operand)
 
         c_src += toadd

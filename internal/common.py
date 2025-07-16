@@ -12,6 +12,8 @@ class BF_IL(Enum):
 
 class Optimized_IL:
     def __repr__(self):
+        if hasattr(self, "op2"):
+            return f"{self.__class__.__name__}({self.op}, {self.op2})"
         if hasattr(self, "operand"):
             return f"{self.__class__.__name__}({self.operand})"
         return self.__class__.__name__
@@ -51,6 +53,16 @@ class IL_Back(Optimized_Arithemetic_IL):
     def __init__(self, x):
         self.operand = x
 
+class IL_Copy(Optimized_IL):
+    def __init__(self, x):
+        self.operand = x
+
+class IL_Mul(Optimized_IL):
+    def __init__(self, x, m):
+        self.op = x
+        self.op2 = m
+
+
 CONVERT_TABLE = {
     IL_Loop: "while (BUFFER[tape_ptr]) {",
     IL_Endl: "}",
@@ -63,4 +75,7 @@ CONVERT_TABLE = {
 
     IL_Out:  "out();",
     IL_In:   "in();",
+
+    IL_Mul:  "mul({op}, {op2});",
+    IL_Copy: "copy({operand});",
 }
