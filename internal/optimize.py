@@ -37,6 +37,8 @@ def optimize_repeats(
             new_il.append(multi(count))
             count = 0
         new_il.append(c)
+    if count > 0:
+        new_il.append(multi(count))
     return new_il
 
 
@@ -272,6 +274,38 @@ def combine_sets_with_adds(il: list[Optimized_IL]) -> list[Optimized_IL]:
 
     return new_il
 
+def remove_add_before_set(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    new_il: list[Optimized_IL] = []
+
+    for i in range(len(il)):
+        if i < 1:
+            new_il.append(il[i])
+            continue
+
+        if isinstance(il[i], IL_Set) and (isinstance(il[i-1], IL_Add) or isinstance(il[i-1], IL_Sub)):
+            # Nomatter what, the add/set can be deleted
+            del new_il[-1]
+
+        new_il.append(il[i])
+
+    return new_il
+
+def remove_multpile_sets(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    new_il: list[Optimized_IL] = []
+
+    for i in range(len(il)):
+        if i < 1:
+            new_il.append(il[i])
+            continue
+
+        if isinstance(il[i], IL_Set) and isinstance(il[i-1], IL_Set):
+            # Delete the old set. It would be overwritten
+            del new_il[-1]
+
+        new_il.append(il[i])
+
+    return new_il
+
 TAPE_LENGTH = -1
 
 # Optimizations. CALL THESE IN ORDER!!
@@ -284,8 +318,10 @@ OPTIMIZATIONS: list[Callable] = [
     remove_unreachable_loops,
     # Unravel loops to turn [->++<] into a mul(1, 2) il
     unravel_loops,
-    # Combine SET il with ADD and SUB il
+    # Some SET, ADD, and SUB optimizations:
     combine_sets_with_adds,
+    remove_add_before_set,
+    remove_multpile_sets,
 ]
 
 
