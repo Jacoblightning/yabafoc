@@ -3,3 +3,6 @@
 *.b
 *.bff
 __pycache__
+
+!fib40.b
+!fib40.bff
