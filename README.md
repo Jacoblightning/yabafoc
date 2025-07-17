@@ -1,6 +1,6 @@
 # YABAFOC: Yet Another BrAinFuck Optimizing Compiler
 
-YABAFOC is an optimizing brainfuck "compiler" written in python.
+YABAFOC is an optimizing brainfuck compiler written in python.
 
 # Requirements
 
@@ -33,7 +33,7 @@ But if I must, here are the timing results for common benchmarks (on my machine)
 
 As you can see, all of these are easily completed ahead of the competition (I'm going to regret saying this aren't I)
 
-Because of this, I created my own benchmark: [fib40](/fib40.bff) ([Precompiled](/fib40.b))
+Because of this, I created my own benchmark: [fib40](/benchmarks/fib40.bff) ([Precompiled](/benchmarks/fib40.b))
 
 YABAFOC runs fib40 in `12s 285ms`
 
