@@ -38,3 +38,7 @@ Because of this, I created my own benchmark: [fib40](/benchmarks/fib40.bff) ([Pr
 YABAFOC runs fib40 in `12s 285ms`
 
 For comparison, BFC takes `44s 935ms` and P‴ takes `17s 753ms`
+
+# ISSUES
+
+If a program fails to produce the correct output or somehow manages to crash without unsafe optimizations, please open an issue and I will take a look at it.
