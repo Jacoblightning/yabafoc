@@ -139,7 +139,7 @@ def run_compiler(bf, tape_length, output, emit_c, verbose, unsafe_opts, dlc):
         print(f"IL: {', '.join([i.name for i in il])}")
 
         print("Step 3: Optimizing IL...")
-    il = optimize_il(il)
+    il = optimize_il(il, tape_length)
     if verbose:
         print(f"IL: {', '.join(map(repr, il))}")
 

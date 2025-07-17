@@ -249,8 +249,30 @@ def remove_unreachable_loops(il: list[Optimized_IL]) -> list[Optimized_IL]:
 
     return new_il
             
-        
 
+def combine_sets_with_adds(il: list[Optimized_IL]) -> list[Optimized_IL]:
+    new_il: list[Optimized_IL] = []
+
+    for i in range(len(il)):
+        if i < 1:
+            new_il.append(il[i])
+            continue
+
+        if (isinstance(il[i], IL_Add) or isinstance(il[i], IL_Sub)) and isinstance(il[i-1], IL_Set):
+            # Can be combined into one instruction
+            if isinstance(il[i], IL_Add):
+                # new_il[-1] would be the set il
+                new_il[-1].operand += il[i].operand
+            else:
+                new_il[-1].operand -= il[i].operand
+            new_il[-1].operand %= TAPE_LENGTH
+            continue
+
+        new_il.append(il[i])
+
+    return new_il
+
+TAPE_LENGTH = -1
 
 # Optimizations. CALL THESE IN ORDER!!
 OPTIMIZATIONS: list[Callable] = [
@@ -262,11 +284,15 @@ OPTIMIZATIONS: list[Callable] = [
     remove_unreachable_loops,
     # Unravel loops to turn [->++<] into a mul(1, 2) il
     unravel_loops,
+    # Combine SET il with ADD and SUB il
+    combine_sets_with_adds,
 ]
 
 
-def optimize_il(il: list[BF_IL]) -> list[Optimized_IL]:
-
+def optimize_il(il: list[BF_IL], tape_length) -> list[Optimized_IL]:
+    global TAPE_LENGTH
+    TAPE_LENGTH = tape_length
+    
     new_il = convert_bf_to_optimized_il(il)
 
     for optimization in OPTIMIZATIONS:
