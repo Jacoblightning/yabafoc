@@ -1,4 +1,5 @@
-a.out
+*.out
 *.bf
 *.b
+*.bff
 __pycache__
